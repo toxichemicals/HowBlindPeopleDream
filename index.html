@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raylib Game Builds</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for a clean, centered look */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0d1117; /* Dark GitHub-like background */
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="max-w-md w-full p-8 space-y-6 bg-[#161b22] border border-[#30363d] rounded-xl shadow-2xl">
+        <h1 class="text-3xl font-bold text-center text-white">
+            🎮 Raylib Web Game Builds
+        </h1>
+        <p class="text-sm text-center text-gray-400">
+            Select your preferred build target below. WASM is typically faster, but JS is a reliable fallback.
+        </p>
+        
+        <nav class="space-y-4">
+            <!-- WASM Link -->
+            <a href="builds/WebLatest/CoolWebWASM.html" 
+               class="flex items-center justify-center p-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition duration-200 shadow-md transform hover:scale-[1.02] active:scale-[0.98]">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 mr-3">
+                    <path d="M12 21.5l-9-5V7.5l9-5 9 5v9l-9 5z"></path>
+                    <path d="M3.27 7.5L12 12.5l8.73-5M12 21.5V12.5"></path>
+                </svg>
+                Latest Precompiled Game (WebAssembly)
+            </a>
+
+            <!-- JS Link -->
+            <a href="builds/WebLatest/CoolWebJS.html" 
+               class="flex items-center justify-center p-4 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-lg transition duration-200 shadow-md transform hover:scale-[1.02] active:scale-[0.98]">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 mr-3">
+                    <polyline points="16 18 22 12 16 6"></polyline>
+                    <polyline points="8 6 2 12 8 18"></polyline>
+                </svg>
+                Latest Precompiled Game (Pure JavaScript Fallback)
+            </a>
+        </nav>
+        
+        <div class="pt-4 text-center text-xs text-gray-500 border-t border-[#30363d] mt-6">
+            <p>Built using the Raylib Cross-Platform Template.</p>
+        </div>
+    </div>
+
+</body>
+</html>

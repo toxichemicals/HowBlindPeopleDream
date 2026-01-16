@@ -1,0 +1,257 @@
+<!doctype html>
+<html>
+<head>
+    <title>Raylib Web Game</title>
+    <style>
+        /* General Body Styling */
+        body { 
+            margin: 0; 
+            padding: 0; 
+            overflow: hidden; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh;
+            background-color: #181818;
+            position: relative;
+            user-select: none; /* Prevent text selection during drag/resize */
+        }
+        /* Canvas Styling */
+        #canvas { 
+            display: block; 
+        }
+        
+        /* Console Container Styling */
+        #console {
+            position: absolute;
+            top: 0;
+            left: 25%; /* Half-screen width: 25% margin + 50% width = 75% coverage */
+            width: 50%; /* Set to half screen width */
+            height: 30%; /* Starting height */
+            background-color: rgba(0, 0, 0, 0.85);
+            color: #ddd;
+            font-family: monospace;
+            padding: 0;
+            box-sizing: border-box;
+            z-index: 1000;
+            display: none; /* Starts hidden */
+            min-height: 50px; 
+            min-width: 250px;
+            resize: none;
+            cursor: default;
+            border-bottom: 5px solid transparent;
+        }
+        
+        /* Console Header Styling (Used for dragging the window) */
+        #console-header {
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 4px;
+            margin: 0;
+            cursor: grab; /* Cursor for moving */
+            user-select: none;
+            text-align: center;
+            font-size: 0.8em;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        /* Console Content Area (Where logs are displayed) */
+        #console-content {
+            height: calc(100% - 25px); /* Full height minus header height */
+            overflow-y: scroll;
+            padding: 5px 15px 5px 10px;
+        }
+
+        /* Resize Handles (Invisible until hover) */
+        .resize-handle {
+            position: absolute;
+            background: transparent;
+            z-index: 1001;
+        }
+
+        /* Side Handles */
+        .h-n, .h-s { height: 10px; left: 0; right: 0; cursor: ns-resize; }
+        .h-w, .h-e { width: 10px; top: 0; bottom: 0; cursor: ew-resize; }
+        .h-n { top: -5px; }
+        .h-s { bottom: -5px; }
+        .h-w { left: -5px; }
+        .h-e { right: -5px; }
+
+        /* Corner Handles */
+        .h-nw, .h-ne, .h-sw, .h-se { width: 10px; height: 10px; }
+        .h-nw { top: -5px; left: -5px; cursor: nwse-resize; }
+        .h-ne { top: -5px; right: -5px; cursor: nesw-resize; }
+        .h-sw { bottom: -5px; left: -5px; cursor: nesw-resize; }
+        .h-se { bottom: -5px; right: -5px; cursor: nwse-resize; }
+    </style>
+</head>
+<body>
+    <div id="console">
+        <div id="console-header">Developer Console (Alt+C to Toggle)</div>
+        <div id="console-content"></div>
+        
+        <div class="resize-handle h-n" data-dir="n"></div>
+        <div class="resize-handle h-s" data-dir="s"></div>
+        <div class="resize-handle h-e" data-dir="e"></div>
+        <div class="resize-handle h-w" data-dir="w"></div>
+        <div class="resize-handle h-ne" data-dir="ne"></div>
+        <div class="resize-handle h-nw" data-dir="nw"></div>
+        <div class="resize-handle h-se" data-dir="se"></div>
+        <div class="resize-handle h-sw" data-dir="sw"></div>
+    </div>
+    
+    <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+    
+    <script type='text/javascript'>
+        // --- Emscripten Module Setup ---
+        var Module = {
+            canvas: (function() {
+                return document.getElementById('canvas');
+            })(),
+            
+            print: function(text) {
+                if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
+                var consoleDiv = document.getElementById('console-content');
+                var logLine = document.createElement('div');
+                logLine.textContent = text;
+                consoleDiv.appendChild(logLine);
+                consoleDiv.scrollTop = consoleDiv.scrollHeight;
+            },
+            printErr: function(text) {
+                if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
+                var consoleDiv = document.getElementById('console-content');
+                var logLine = document.createElement('div');
+                logLine.textContent = '[ERR] ' + text;
+                logLine.style.color = 'red';
+                consoleDiv.appendChild(logLine);
+                consoleDiv.scrollTop = consoleDiv.scrollHeight;
+            }
+        };
+
+        // --- Console Interaction Logic (Drag, Resize, Toggle) ---
+        function initConsoleInteractions() {
+            const consoleEl = document.getElementById('console');
+            const headerEl = document.getElementById('console-header');
+            const resizeHandles = document.querySelectorAll('#console .resize-handle');
+            
+            let isDragging = false;
+            let resizeDirection = null;
+            let startX, startY, startW, startH, startTop, startLeft;
+
+            // 1. Alt+C Toggle Logic
+            document.addEventListener('keydown', function(event) {
+                if (event.altKey && event.code === 'KeyC') {
+                    event.preventDefault();
+                    if (consoleEl.style.display === 'block') {
+                        consoleEl.style.display = 'none';
+                    } else {
+                        consoleEl.style.display = 'block';
+                        consoleEl.style.position = 'absolute'; 
+                        
+                        // Set initial position if not explicitly set (ensuring CSS defaults are used)
+                        if (consoleEl.style.top === '') consoleEl.style.top = '0px';
+                        if (consoleEl.style.left === '') consoleEl.style.left = '25%'; // Use CSS default 
+                        if (consoleEl.style.width === '') consoleEl.style.width = '50%'; // Use CSS default
+                    }
+                }
+            });
+
+            // 2. Movability (Dragging Header)
+            headerEl.addEventListener('mousedown', function(e) {
+                isDragging = true;
+                e.preventDefault();
+                headerEl.style.cursor = 'grabbing';
+                
+                startX = e.clientX;
+                startY = e.clientY;
+                startTop = consoleEl.offsetTop;
+                startLeft = consoleEl.offsetLeft;
+            });
+
+            // 3. Resizability (Attaching to Handles)
+            resizeHandles.forEach(handle => {
+                handle.addEventListener('mousedown', function(e) {
+                    resizeDirection = handle.getAttribute('data-dir');
+                    e.preventDefault(); 
+                    
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    startW = consoleEl.offsetWidth;
+                    startH = consoleEl.offsetHeight;
+                    startTop = consoleEl.offsetTop;
+                    startLeft = consoleEl.offsetLeft;
+                });
+            });
+
+            // 4. Mouse Movement Handler (Resizing and Dragging)
+            document.addEventListener('mousemove', function(e) {
+                
+                // DRAGGING LOGIC
+                if (isDragging) {
+                    let newTop = startTop + e.clientY - startY;
+                    let newLeft = startLeft + e.clientX - startX;
+                    
+                    // Simple bounds check (optional)
+                    newTop = Math.max(0, newTop);
+                    
+                    consoleEl.style.top = newTop + 'px';
+                    consoleEl.style.left = newLeft + 'px';
+                } 
+                
+                // RESIZING LOGIC
+                else if (resizeDirection) {
+                    const dir = resizeDirection;
+                    const dx = e.clientX - startX;
+                    const dy = e.clientY - startY;
+                    let newW = startW, newH = startH, newTop = startTop, newLeft = startLeft;
+                    const minW = 250, minH = 50;
+                    
+                    // Vertical (N, S)
+                    if (dir.includes('n')) {
+                        newH = startH - dy;
+                        if (newH >= minH) {
+                            newTop = startTop + dy;
+                            consoleEl.style.top = newTop + 'px';
+                        }
+                    } else if (dir.includes('s')) {
+                        newH = startH + dy;
+                    }
+                    
+                    // Horizontal (W, E)
+                    if (dir.includes('w')) {
+                        newW = startW - dx;
+                        if (newW >= minW) {
+                            newLeft = startLeft + dx;
+                            consoleEl.style.left = newLeft + 'px';
+                        }
+                    } else if (dir.includes('e')) {
+                        newW = startW + dx;
+                    }
+
+                    // Apply new dimensions, enforcing minimums
+                    if (newH >= minH) {
+                        consoleEl.style.height = newH + 'px';
+                    }
+                    if (newW >= minW) {
+                        consoleEl.style.width = newW + 'px';
+                    }
+
+                    e.preventDefault();
+                }
+            });
+
+            // 5. Mouse Up (Stop Dragging/Resizing)
+            document.addEventListener('mouseup', function() {
+                isDragging = false;
+                resizeDirection = null;
+                headerEl.style.cursor = 'grab'; // Reset header cursor
+            });
+        }
+        
+        // Initialize the interactions once the script runs
+        initConsoleInteractions();
+
+    </script>
+    
+    {{{ SCRIPT }}}
+</body>
+</html>
