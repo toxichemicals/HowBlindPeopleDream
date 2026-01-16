@@ -13,7 +13,7 @@ int worldMap[MAP_SIZE][MAP_SIZE] = {
 };
 
 int main(void) {
-    InitWindow(1920, 1080, "How blind people dream");
+    InitWindow(800, 600, "How blind people dream");
     int currentstate = 1;
     float PI_DREAM = 3.14159265;
     float E_FREQ = 2.7182;
@@ -146,7 +146,7 @@ int main(void) {
         BeginDrawing();
             // Scale up to 1080p
             DrawTexturePro(screenTex, (Rectangle){0, 0, RENDER_W, RENDER_H}, 
-                           (Rectangle){0, 0, 1920, 1080}, (Vector2){0,0}, 0.0f, WHITE);
+                           (Rectangle){0, 0, 800, 600}, (Vector2){0,0}, 0.0f, WHITE);
             DrawFPS(10, 10);
         EndDrawing();
     }
